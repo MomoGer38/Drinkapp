@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Drink &amp; Pay</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <!-- ============================================================
+         SCREEN 1: Spieler-Setup
+    ============================================================ -->
+    <div id="screen-setup" class="screen active">
+        <div class="setup-container">
+
+            <div class="logo">
+                <span class="logo-icon">💸</span>
+                <h1>Drink &amp; Pay</h1>
+                <p class="subtitle">Das Spiel, das teuer werden kann</p>
+            </div>
+
+            <div class="player-input-area">
+                <div class="input-row">
+                    <input
+                        type="text"
+                        id="player-name-input"
+                        placeholder="Spielername eingeben..."
+                        maxlength="20"
+                        autocomplete="off"
+                    >
+                    <button id="add-player-btn" class="btn-icon" aria-label="Spieler hinzufügen">+</button>
+                </div>
+                <ul id="player-list"></ul>
+            </div>
+
+            <div class="setup-footer">
+                <p id="player-count-info">Mindestens 2 Spieler benötigt</p>
+                <button id="start-game-btn" class="btn-primary" disabled>Weiter →</button>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ============================================================
+         SCREEN 1.5: Kategorien & Schwierigkeit
+    ============================================================ -->
+    <div id="screen-categories" class="screen">
+        <div class="categories-container">
+
+            <div class="categories-header">
+                <button class="btn-back" id="back-to-setup-btn" aria-label="Zurück">←</button>
+                <div>
+                    <h2>Kategorien</h2>
+                    <p class="subtitle">Was ist heute Nacht erlaubt?</p>
+                </div>
+            </div>
+
+            <!-- Schwierigkeitsstufen -->
+            <p class="section-label">SCHWIERIGKEIT</p>
+            <div class="level-toggles">
+                <label class="level-toggle" data-level="1">
+                    <input type="checkbox" data-level="1" checked>
+                    <div class="level-toggle-inner">
+                        <span class="level-badge l1">STUFE 1</span>
+                        <span class="level-desc">Harmlos &amp; Fun</span>
+                    </div>
+                </label>
+                <label class="level-toggle" data-level="2">
+                    <input type="checkbox" data-level="2" checked>
+                    <div class="level-toggle-inner">
+                        <span class="level-badge l2">STUFE 2</span>
+                        <span class="level-desc">Härter &amp; Peinlich</span>
+                    </div>
+                </label>
+                <label class="level-toggle" data-level="3">
+                    <input type="checkbox" data-level="3" checked>
+                    <div class="level-toggle-inner">
+                        <span class="level-badge l3">STUFE 3</span>
+                        <span class="level-desc">Brutal &amp; Ohne Gnade</span>
+                    </div>
+                </label>
+            </div>
+
+            <!-- Kategorien -->
+            <p class="section-label">KATEGORIEN</p>
+            <div class="category-grid" id="category-grid"></div>
+
+            <div class="categories-footer">
+                <p id="task-count-info" class="task-count-info"></p>
+                <button class="btn-primary" id="confirm-categories-btn">Spiel Starten!</button>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ============================================================
+         SCREEN 2: Hauptspiel
+    ============================================================ -->
+    <div id="screen-game" class="screen">
+
+        <!-- Jackpot -->
+        <div class="game-header">
+            <div class="pot-display">
+                <span class="pot-label">JACKPOT</span>
+                <span class="pot-amount" id="pot-amount">0 €</span>
+            </div>
+        </div>
+
+        <!-- Aktueller Spieler -->
+        <div class="current-player-area">
+            <p class="current-player-label">Dran ist</p>
+            <h2 id="current-player-name">Spieler</h2>
+            <div class="lives-display" id="lives-display"></div>
+        </div>
+
+        <!-- Aufgabenkarte -->
+        <div class="task-card" id="task-card">
+            <p class="task-label">DEINE AUFGABE</p>
+            <p class="task-text" id="task-text"></p>
+        </div>
+
+        <!-- Aktions-Buttons -->
+        <div class="action-buttons">
+            <button class="btn-action btn-do" id="btn-do-task">
+                <span class="btn-action-icon">✅</span>
+                <div class="btn-action-content">
+                    <span class="btn-action-text">Aufgabe machen</span>
+                    <span class="btn-action-sub" id="btn-do-reward">Runde gewinnen</span>
+                </div>
+            </button>
+            <button class="btn-action btn-pass" id="btn-pass-task">
+                <span class="btn-action-icon">💸</span>
+                <div class="btn-action-content">
+                    <span class="btn-action-text">10 € einzahlen</span>
+                    <span class="btn-action-sub">&amp; Weitergeben</span>
+                </div>
+            </button>
+        </div>
+
+        <!-- Spieler-Übersicht -->
+        <div class="players-overview" id="players-overview"></div>
+
+    </div>
+
+    <!-- ============================================================
+         SCREEN 3: Spiel vorbei
+    ============================================================ -->
+    <div id="screen-gameover" class="screen">
+        <div class="gameover-container">
+            <span class="gameover-icon">🏆</span>
+            <h2>Spiel vorbei!</h2>
+            <p class="gameover-winner-label">GEWINNER</p>
+            <h3 id="winner-name">-</h3>
+            <p id="winner-money" class="winner-money"></p>
+
+            <!-- Vollständiges Ergebnis aller Spieler -->
+            <div class="scoreboard" id="scoreboard"></div>
+
+            <button class="btn-primary" id="restart-btn">Neues Spiel</button>
+        </div>
+    </div>
+
+    <script src="js/tasks.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
