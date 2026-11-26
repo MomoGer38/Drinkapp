@@ -37,6 +37,24 @@
   .help { margin-top:12px; font-size:13px; opacity:.7; line-height:1.5; }
   #rotateHint { display:none; margin-top:8px; font-size:13px; color:var(--accent); }
   @media (orientation:portrait) and (max-width:900px) { #rotateHint { display:block; } }
+  @media (max-height:520px) {
+    .overlay { padding:8px; }
+    .panel { padding:10px 14px; }
+    h1 { font-size:22px; margin:0; }
+    p.sub { font-size:12px; margin:0 0 2px; }
+    h2 { margin:6px 0 4px; font-size:12px; }
+    .themes { grid-template-columns:repeat(4,1fr); gap:6px; }
+    .theme { padding:3px; }
+    .theme canvas { height:44px; object-fit:cover; }
+    .theme span { margin-top:2px; font-size:12px; }
+    button.opt { padding:6px 12px; font-size:14px; }
+    button.big { padding:9px 28px; font-size:17px; margin-top:8px; }
+    .help { margin-top:6px; font-size:11px; line-height:1.35; }
+  }
+  #portraitHint { position:fixed; left:0; right:0; bottom:12px; text-align:center; z-index:6; pointer-events:none;
+    color:#fff; font-size:14px; display:none; }
+  #portraitHint span { background:rgba(0,0,0,.7); padding:6px 12px; border-radius:20px; }
+  @media (orientation:portrait) and (pointer:coarse) { body.ingame #portraitHint { display:block; } }
   #pauseBtn { position:fixed; top:10px; right:10px; z-index:5; width:44px; height:44px; border-radius:50%;
     border:none; background:rgba(0,0,0,.45); color:#fff; font-size:18px; cursor:pointer; display:none; }
   .stick { position:fixed; width:120px; height:120px; margin:-60px 0 0 -60px; border-radius:50%;
@@ -49,6 +67,7 @@
 <body>
 <div id="wrap"><canvas id="game"></canvas></div>
 <button id="pauseBtn" aria-label="Pause">❚❚</button>
+<div id="portraitHint"><span>📱 Handy quer halten für ein größeres Spielfeld</span></div>
 <div class="stick" id="stickMove"><div class="knob"></div></div>
 <div class="stick aim" id="stickAim"><div class="knob"></div></div>
 
@@ -223,11 +242,18 @@ function rotateToward(cur, target, maxStep) {
   const d = angNorm(target - cur);
   return Math.abs(d) <= maxStep ? target : cur + Math.sign(d) * maxStep;
 }
+// Verhindert, dass etwas diagonal zwischen zwei Wänden hindurchrutscht, die sich nur an einer Ecke berühren
+function cornerBlocked(x0, y0, x1, y1) {
+  const c0 = Math.floor(x0 / T), r0 = Math.floor(y0 / T), c1 = Math.floor(x1 / T), r1 = Math.floor(y1 / T);
+  return c0 !== c1 && r0 !== r1 && wallTile(c1, r0) && wallTile(c0, r1);
+}
 function hasLOS(ax, ay, bx, by) {
   const d = Math.hypot(bx - ax, by - ay), steps = Math.ceil(d / 6);
-  for (let i = 1; i < steps; i++) {
-    const t = i / steps;
-    if (wallAt(ax + (bx - ax) * t, ay + (by - ay) * t)) return false;
+  let px = ax, py = ay;
+  for (let i = 1; i <= steps; i++) {
+    const t = i / steps, x = ax + (bx - ax) * t, y = ay + (by - ay) * t;
+    if ((i < steps && wallAt(x, y)) || cornerBlocked(px, py, x, y)) return false;
+    px = x; py = y;
   }
   return true;
 }
@@ -316,7 +342,7 @@ const sticks = { move: null, aim: null };
 window.addEventListener("keydown", e => {
   keys[e.code] = true;
   if (e.code === "Space") e.preventDefault();
-  if ((e.code === "KeyP" || e.code === "Escape") && (state === "play" || state === "countdown")) pauseGame();
+  if ((e.code === "KeyP" || e.code === "Escape") && canPause()) pauseGame();
   else if ((e.code === "KeyP" || e.code === "Escape") && state === "paused") resumeGame();
 });
 window.addEventListener("keyup", e => { keys[e.code] = false; });
@@ -467,9 +493,10 @@ function updateBullets(dt) {
     const steps = 3;
     for (let s = 0; s < steps && b.life > 0; s++) {
       const nx = b.x + b.vx * dt / steps, ny = b.y + b.vy * dt / steps;
-      if (wallAt(nx, ny)) {
+      if (wallAt(nx, ny) || cornerBlocked(b.x, b.y, nx, ny)) {
         if (b.bounces <= 0) { b.life = 0; puff(b.x, b.y, TH.spark, 6); break; }
-        const hitX = wallAt(nx, b.y), hitY = wallAt(b.x, ny);
+        const corner = !wallAt(nx, ny);
+        const hitX = corner || wallAt(nx, b.y), hitY = corner || wallAt(b.x, ny);
         if (hitX || !hitY) b.vx = -b.vx;
         if (hitY || !hitX) b.vy = -b.vy;
         b.bounces--; b.bounced = true; sfx.bounce(); puff(b.x, b.y, TH.spark, 3, 50);
@@ -477,7 +504,9 @@ function updateBullets(dt) {
       for (const t of [player, enemy]) {
         if (!t.alive || (t === b.owner && !b.bounced)) continue;
         if (Math.hypot(t.x - b.x, t.y - b.y) < TANK_R + BULLET_R) {
-          b.life = 0; t.hp--; t.hit = 0.15; sfx.hit(); puff(b.x, b.y, "#ffcf6a", 10, 120);
+          b.life = 0;
+          if (state !== "play") { puff(b.x, b.y, TH.spark, 6); break; }
+          t.hp = Math.max(0, t.hp - 1); t.hit = 0.15; sfx.hit(); puff(b.x, b.y, "#ffcf6a", 10, 120);
           if (t.hp <= 0 && state === "play") { t.alive = false; explode(t); endRound(t === enemy); }
           break;
         }
@@ -596,7 +625,7 @@ function loop(now) {
 // ---------- Menüs ----------
 const $ = id => document.getElementById(id);
 function show(id, on) { $(id).classList.toggle("hidden", !on); }
-function clearSticks() { sticks.move = sticks.aim = null; setStickEl("move", null); setStickEl("aim", null); mouseDown = false; }
+function clearSticks() { for (const k in keys) keys[k] = false; sticks.move = sticks.aim = null; setStickEl("move", null); setStickEl("aim", null); mouseDown = false; }
 function buildMenu() {
   const tw = $("themes"); tw.innerHTML = "";
   for (const k in THEMES) {
@@ -625,15 +654,16 @@ function startGame() {
     try { const el = document.documentElement; (el.requestFullscreen ? el.requestFullscreen() : Promise.resolve())
             .then(() => screen.orientation && screen.orientation.lock && screen.orientation.lock("landscape")).catch(() => {}); } catch (e) {}
   }
-  show("menu", false); show("endMenu", false); $("pauseBtn").style.display = "block";
+  show("menu", false); show("endMenu", false); $("pauseBtn").style.display = "block"; document.body.classList.add("ingame");
   clearSticks(); newMatch();
 }
+function canPause() { return state === "play" || state === "countdown" || state === "roundEnd"; }
 function pauseGame() { prevState = state; state = "paused"; clearSticks(); show("pauseMenu", true); }
 function resumeGame() { state = prevState; show("pauseMenu", false); last = performance.now(); }
 function toMenu() { state = "menu"; player = null; show("pauseMenu", false); show("endMenu", false); show("menu", true);
-  $("pauseBtn").style.display = "none"; clearSticks(); }
+  $("pauseBtn").style.display = "none"; document.body.classList.remove("ingame"); clearSticks(); }
 function showEnd() {
-  state = "menu"; clearSticks(); $("pauseBtn").style.display = "none";
+  state = "menu"; clearSticks(); $("pauseBtn").style.display = "none"; document.body.classList.remove("ingame");
   const won = score.p > score.e;
   $("endTitle").textContent = won ? "🏆 Sieg!" : "💥 Niederlage";
   $("endSub").textContent = "Endstand " + score.p + " : " + score.e + " (" + DIFFS[diffKey].name + ")";
@@ -644,8 +674,10 @@ $("againBtn").onclick = startGame;
 $("menuBtn").onclick = toMenu;
 $("quitBtn").onclick = toMenu;
 $("resumeBtn").onclick = resumeGame;
-$("pauseBtn").onclick = () => { if (state === "play" || state === "countdown") pauseGame(); };
-document.addEventListener("visibilitychange", () => { if (document.hidden && (state === "play" || state === "countdown")) pauseGame(); });
+$("pauseBtn").onclick = () => { if (canPause()) pauseGame(); };
+document.addEventListener("visibilitychange", () => { if (document.hidden && canPause()) pauseGame(); });
+// 2: Tasten freigeben, wenn das Fenster den Fokus verliert (z. B. Alt+Tab unter Windows)
+window.addEventListener("blur", () => { for (const k in keys) keys[k] = false; mouseDown = false; });
 
 buildMenu(); resize(); requestAnimationFrame(loop);
 </script>
